@@ -1,0 +1,2314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MUL Connect - Chat</title>
+<link rel="stylesheet" href="./css/style.css">
+<!-- ADD THIS CSS TO YOUR <head> SECTION -->
+<style>
+/* ==================== WHATSAPP MOBILE FIX ==================== */
+
+/* Base reset */
+* {
+    box-sizing: border-box;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+}
+
+
+/* ==================== DESKTOP VIEW ==================== */
+@media (min-width: 769px) {
+    .sidebar {
+        display: flex !important;
+        width: 35%;
+        min-width: 300px;
+        border-right: 1px solid #ddd;
+    }
+    
+    .chat-area {
+        display: flex !important;
+        flex: 1;
+    }
+    
+    #mobileBackBtn {
+        display: none !important;
+    }
+}
+
+/* ==================== MOBILE VIEW ==================== */
+@media (max-width: 768px) {
+    /* Prevent body scroll */
+    body {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    /* Container fills screen */
+    .container {
+        height: 100vh;
+        height: -webkit-fill-available; /* iOS fix */
+    }
+    
+    /* Main content positioning */
+    .main-content {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* ==================== SIDEBAR (List View) ==================== */
+    .sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        z-index: 10;
+        transform: translateX(0);
+        transition: transform 0.3s ease;
+    }
+    
+    /* ==================== CHAT AREA ==================== */
+    .chat-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        z-index: 5;
+        transform: translateX(100%); /* Hidden by default */
+        transition: transform 0.3s ease;
+    }
+    
+    /* ==================== MOBILE CHAT ACTIVE STATE ==================== */
+    body.mobile-chat-active .sidebar {
+        transform: translateX(-100%); /* Slide sidebar left */
+    }
+    
+    body.mobile-chat-active .chat-area {
+        transform: translateX(0); /* Bring chat into view */
+        z-index: 15;
+    }
+    
+    /* Show back button when chat is active */
+    body.mobile-chat-active #mobileBackBtn {
+        display: inline-flex !important;
+    }
+    
+    /* ==================== CHAT SCREEN STRUCTURE ==================== */
+    .chat-screen {
+        display: flex !important;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+    }
+    
+    .chat-header {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        background: #075e54;
+        color: white;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        background: #e5ddd5;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .message-input-wrapper {
+        flex-shrink: 0;
+        padding: 10px;
+        background: #f0f0f0;
+        border-top: 1px solid #ddd;
+    }
+    
+    /* ==================== SIDEBAR SCROLLING ==================== */
+    .sidebar {
+        overflow: hidden;
+    }
+    
+    .sidebar-header {
+        flex-shrink: 0;
+        padding: 15px;
+    }
+    
+    .sidebar-section {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* ==================== HIDE WELCOME ON MOBILE ==================== */
+    #welcomeScreen {
+        display: none !important;
+    }
+    
+    /* ==================== LARGER TAP TARGETS ==================== */
+    .user-item,
+    .group-item {
+        padding: 15px !important;
+        min-height: 65px;
+        cursor: pointer;
+    }
+    
+    .message-input {
+        font-size: 16px !important; /* Prevents iOS zoom */
+        padding: 12px !important;
+    }
+    
+    .btn-send {
+        padding: 12px 20px !important;
+        font-size: 14px !important;
+    }
+}
+
+/* ==================== BACK BUTTON STYLING ==================== */
+#mobileBackBtn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    padding: 5px 10px;
+    margin-right: 10px;
+    align-items: center;
+}
+
+#mobileBackBtn:active {
+    opacity: 0.7;
+}
+
+/* ==================== CHAT USER INFO ==================== */
+.chat-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.chat-user-info .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #fff;
+    color: #075e54;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+#chatUserName {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+#chatUserStatus {
+    font-size: 12px;
+    opacity: 0.9;
+}
+</style>
+<style>
+/* ---------------- MODAL ---------------- */
+.modal {
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(0,0,0,0.6); 
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+.modal.active { display: flex; }
+
+/* ---------------- TYPING INDICATOR ---------------- */
+.typing-bubble {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    margin: 10px;
+    background: #e9ecef;
+    border-radius: 18px;
+    width: fit-content;
+    border-bottom-left-radius: 2px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.typing-dots { display: flex; gap: 4px; }
+.typing-dots span {
+    width: 7px; height: 7px; background: #8e8e93; border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounce { 
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 
+    40% { transform: scale(1.1); opacity: 1; } 
+}
+
+/* ---------------- EMOJI PICKER ---------------- */
+.emoji-picker {
+    position: absolute;
+    bottom: 70px;
+    left: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-width: 300px;
+}
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+.emoji-grid span {
+    font-size: 24px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    transition: all 0.2s;
+    text-align: center;
+}
+.emoji-grid span:hover { background-color: #f0f0f0; transform: scale(1.2); }
+
+/* ---------------- INPUT AREA ---------------- */
+.input-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.icon-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+.icon-btn:hover { background-color: #f0f0f0; }
+.message-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    font-size: 14px;
+    outline: none;
+}
+.btn-send {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* ---------------- ADD MEMBER & CREATE GROUP BUTTONS ---------------- */
+#addMemberModal .modal-content button,
+#createGroupModal .modal-content button {
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+#cancelAddMembers, #closeModalBtn { background-color: #ccc; color: #333; }
+#cancelAddMembers:hover, #closeModalBtn:hover { background-color: #999; color: #fff; }
+#confirmAddMembers, #confirmCreateGroup { background-color: #007bff; color: #fff; }
+#confirmAddMembers:hover, #confirmCreateGroup:hover { background-color: #0056b3; }
+
+/* ---------------- CREATE GROUP INPUT ---------------- */
+#createGroupModal input#newGroupName {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 25px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    outline: none;
+    margin-top: 15px;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+#createGroupModal input#newGroupName:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0,123,255,0.5);
+}
+/* Hide chat UI when welcome screen is active (desktop WhatsApp behavior) */
+
+
+
+/* ---------------- MOBILE VIEW ---------------- */
+/* ================= MOBILE MODE CONTROL ================= */
+@media (max-width: 768px) {
+    body.mobile-list .sidebar {
+        display: block;
+    }
+
+    body.mobile-list .chat-area {
+        display: none;
+    }
+
+    body.mobile-chat .sidebar {
+        display: none;
+    }
+
+    body.mobile-chat .chat-area {
+        display: flex;
+        height: 100vh;
+    }
+
+    body.mobile-chat .welcome-screen {
+        display: none !important;
+    }
+
+    /* Chat layout fix */
+    .chat-screen {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    #messagesContainer {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 90px;
+    }
+
+    .message-input-wrapper {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+    }
+}
+
+/* ================= MOBILE GROUP BUTTON WIDTH FIX ================= */
+@media (max-width: 768px) {
+
+    .group-controls {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        max-width: 120px;   /* HARD LIMIT */
+        overflow: hidden;
+    }
+
+    .group-controls button {
+        padding: 4px 6px;
+        font-size: 10px;
+        border-radius: 10px;
+        height: 24px;
+        line-height: 1;
+        min-width: 48px;
+        max-width: 56px;    /* 🔴 KEY FIX */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .group-controls .btn-add {
+        background-color: #25d366;
+        color: #fff;
+    }
+
+    .group-controls .btn-delete {
+        background-color: #ff4d4f;
+        color: #fff;
+    }
+}
+/* ================= MOBILE: REMOVE AVATAR SPACE ================= */
+@media (max-width: 768px) {
+
+    .chat-user-info .avatar {
+        display: none !important;
+    }
+
+    .chat-user-info {
+        gap: 6px; /* tighten spacing after removing avatar */
+    }
+}
+
+/* ==================== COMPLETE MOBILE INPUT FIX ==================== */
+
+/* ✅ FORCE INPUT TO ALWAYS SHOW ON MOBILE IN CHAT MODE */
+@media (max-width: 768px) {
+    
+    /* When chat is active, show ALL chat elements */
+    body.mobile-chat-active .chat-header {
+        display: flex !important;
+        flex-shrink: 0;
+        background: #075e54;
+        color: white;
+        padding: 15px;
+    }
+    
+    body.mobile-chat-active .messages-container {
+        display: flex !important;
+        flex-direction: column;
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 10px;
+        background: #e5ddd5;
+        min-height: 0;
+    }
+    
+    /* ✅ THIS IS THE KEY FIX - FORCE INPUT TO SHOW */
+    body.mobile-chat-active .message-input-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        flex-shrink: 0;
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        background: #f0f0f0;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+        z-index: 100;
+        box-sizing: border-box;
+    }
+    
+    /* ✅ Remove ANY hiding rules for input wrapper */
+    .message-input-wrapper {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* ✅ Input container layout */
+    body.mobile-chat-active .input-container {
+        display: flex !important;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    /* ✅ Icon buttons (camera & emoji) */
+    body.mobile-chat-active .icon-btn {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        padding: 10px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* ✅ Text input field */
+    body.mobile-chat-active .message-input {
+        display: block !important;
+        flex: 1;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 25px;
+        font-size: 16px !important; /* Prevents iOS zoom */
+        outline: none;
+        min-width: 0;
+        background: white;
+    }
+    
+    /* ✅ Send button */
+    body.mobile-chat-active .btn-send {
+        display: inline-block !important;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    
+    /* ✅ Back button */
+    body.mobile-chat-active #mobileBackBtn {
+        display: inline-flex !important;
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 5px 10px;
+        margin-right: 10px;
+    }
+    
+    /* ✅ Chat screen full height */
+    body.mobile-chat-active .chat-screen {
+        display: flex !important;
+        flex-direction: column;
+        height: 100vh;
+        width: 100%;
+    }
+    
+    /* ✅ Emoji picker positioning */
+    body.mobile-chat-active .emoji-picker {
+        position: fixed;
+        bottom: 80px;
+        left: 10px;
+        right: 10px;
+        max-width: calc(100% - 20px);
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+    }
+    
+    /* ✅ When NOT in chat mode, hide chat elements */
+    body:not(.mobile-chat-active) .chat-header,
+    body:not(.mobile-chat-active) .messages-container,
+    body:not(.mobile-chat-active) .message-input-wrapper {
+        display: none !important;
+    }
+}
+
+/* ==================== OVERRIDE ANY CONFLICTING RULES ==================== */
+@media (max-width: 768px) {
+    /* Remove welcome-active hiding if it exists */
+    .welcome-active .message-input-wrapper {
+        visibility: visible !important;
+        display: flex !important;
+    }
+    
+    body.mobile-chat-active .welcome-active .message-input-wrapper {
+        visibility: visible !important;
+        display: flex !important;
+    }
+}
+
+/* ==================== ENSURE BUTTONS ARE VISIBLE ==================== */
+#imageBtn,
+#emojiBtn,
+#sendBtn,
+#messageInput {
+    display: block !important;
+}
+
+@media (max-width: 768px) {
+    body.mobile-chat-active #imageBtn,
+    body.mobile-chat-active #emojiBtn,
+    body.mobile-chat-active #sendBtn,
+    body.mobile-chat-active #messageInput {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+
+/* ================= WHATSAPP-EXACT MOBILE BEHAVIOR ================= */
+@media (max-width: 768px) {
+
+    body {
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    main.main-content {
+        height: calc(100vh - 70px); /* header height */
+        display: flex;
+        overflow: hidden;
+    }
+
+    /* STATES */
+    body.mobile-list .sidebar { display: flex; }
+    body.mobile-list .chat-area { display: none; }
+
+    body.mobile-chat .sidebar { display: none; }
+    body.mobile-chat .chat-area { display: flex; }
+
+    /* SIDEBAR */
+    .sidebar {
+        flex: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .sidebar-section {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* CHAT */
+    .chat-area {
+        flex: 1;
+        height: 100%;
+        display: flex;
+        min-height: 0;
+    }
+
+    .chat-screen {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+        padding-bottom: 90px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .message-input-wrapper {
+        flex-shrink: 0;
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        z-index: 5;
+    }
+}
+
+
+@media (max-width: 768px) {
+
+    /* Sidebar must fill screen */
+    .sidebar {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* important */
+    }
+
+    /* Header + search stay visible */
+    .sidebar-header {
+        flex-shrink: 0;
+    }
+
+    /* This area becomes scrollable */
+    .sidebar-section {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    /* Merge scroll feeling (no visual change) */
+    .sidebar-section:last-child {
+        padding-bottom: 20px;
+    }
+
+}
+
+.welcome-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+.chat-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* ==================== NUCLEAR OVERRIDE - ADD AT THE VERY END ==================== */
+@media (max-width: 768px) {
+    body.mobile-chat-active .message-input-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        background: #f0f0f0 !important;
+        padding: 10px !important;
+        z-index: 9999 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+        min-height: 60px !important;
+    }
+    
+    body.mobile-chat-active .input-container {
+        display: flex !important;
+        width: 100% !important;
+    }
+    
+    body.mobile-chat-active .message-input,
+    body.mobile-chat-active .icon-btn,
+    body.mobile-chat-active .btn-send {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+</style>
+<style>
+/* ==================== WHATSAPP MOBILE VIEW FIX ==================== */
+
+/* Desktop: Both sidebar and chat visible */
+@media (min-width: 769px) {
+    .sidebar {
+        display: flex !important;
+    }
+    
+    .chat-area {
+        display: flex !important;
+    }
+    
+    #mobileBackBtn {
+        display: none !important;
+    }
+}
+
+/* Mobile: Toggle between sidebar and chat */
+@media (max-width: 768px) {
+    body, html {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .container {
+        height: 100vh;
+        height: -webkit-fill-available;
+        overflow: hidden;
+    }
+    
+    .main-content {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* ✅ SIDEBAR: Visible by default, hidden when chat is open */
+    .sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        display: flex;
+        transition: transform 0.3s ease;
+    }
+    
+    /* ✅ CHAT AREA: Hidden by default, visible when chat is open */
+    .chat-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 5;
+        display: flex;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    }
+    
+    /* ✅ When chat is active (mobile-chat-active class on body) */
+    body.mobile-chat-active .sidebar {
+        transform: translateX(-100%); /* Slide sidebar left */
+    }
+    
+    body.mobile-chat-active .chat-area {
+        transform: translateX(0); /* Bring chat into view */
+        z-index: 15;
+    }
+    
+    body.mobile-chat-active #mobileBackBtn {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 16px;
+        color: #075e54;
+        font-weight: 600;
+    }
+    
+    /* ✅ Welcome screen hidden on mobile by default */
+    #welcomeScreen {
+        display: none !important;
+    }
+    
+    /* ✅ Chat screen always ready */
+    #chatScreen {
+        display: flex !important;
+        visibility: visible !important;
+    }
+    
+    /* ✅ Hide chat content until user selected */
+    body:not(.mobile-chat-active) .chat-header,
+    body:not(.mobile-chat-active) .messages-container,
+    body:not(.mobile-chat-active) .message-input-wrapper {
+        display: none !important;
+    }
+    
+    /* ✅ Header adjustments */
+    .header {
+        padding: 10px 15px !important;
+    }
+    
+    .header h1 {
+        font-size: 18px !important;
+    }
+    
+    .user-info {
+        font-size: 12px !important;
+    }
+    
+    /* ✅ Sidebar adjustments */
+    .sidebar-header {
+        padding: 15px !important;
+    }
+    
+    .search-input {
+        font-size: 14px !important;
+        padding: 10px !important;
+    }
+    
+    /* ✅ User items larger tap targets */
+    .user-item,
+    .group-item {
+        padding: 15px !important;
+        min-height: 60px;
+    }
+    
+    /* ✅ Messages container full height */
+    .messages-container {
+        padding: 10px !important;
+    }
+    
+    /* ✅ Input wrapper */
+    .message-input-wrapper {
+        padding: 10px !important;
+    }
+    
+    .message-input {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+    }
+}
+
+/* ==================== WHATSAPP-STYLE BACK BUTTON ==================== */
+#mobileBackBtn {
+    background: none;
+    border: none;
+    display: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #075e54;
+    font-weight: 600;
+    padding: 5px;
+    margin-right: 10px;
+}
+
+#mobileBackBtn:active {
+    opacity: 0.7;
+}
+
+/* ==================== WHATSAPP-STYLE INPUT BOX FIX ==================== */
+/* Add this at the VERY END of your <style> section */
+
+@media (max-width: 768px) {
+    
+    /* ✅ Fix chat screen to not cover input */
+    body.mobile-chat-active .chat-screen {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100vh !important;
+        width: 100% !important;
+        position: relative !important;
+    }
+    
+    /* ✅ Chat header at top */
+    body.mobile-chat-active .chat-header {
+        flex-shrink: 0 !important;
+        background: #075e54 !important;
+        color: white !important;
+        padding: 15px !important;
+        z-index: 10 !important;
+    }
+    
+    /* ✅ Messages container - leave space for input */
+    body.mobile-chat-active .messages-container {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 10px !important;
+        padding-bottom: 80px !important; /* Space for input */
+        background: #e5ddd5 !important;
+        min-height: 0 !important;
+    }
+    
+    /* ✅ INPUT WRAPPER - FIXED AT BOTTOM LIKE WHATSAPP */
+    body.mobile-chat-active .message-input-wrapper {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        background: #f0f0f0 !important;
+        padding: 8px 10px !important;
+        border-top: 1px solid #ddd !important;
+        z-index: 1000 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* ✅ Input container - horizontal layout */
+    body.mobile-chat-active .input-container {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    
+    /* ✅ Icon buttons (camera & emoji) */
+    body.mobile-chat-active .icon-btn {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 24px !important;
+        padding: 8px !important;
+        background: none !important;
+        border: none !important;
+        cursor: pointer !important;
+        flex-shrink: 0 !important;
+        width: 40px !important;
+        height: 40px !important;
+        color: #54656f !important;
+    }
+    
+    /* ✅ Message input field - WhatsApp style */
+    body.mobile-chat-active .message-input {
+        flex: 1 !important;
+        padding: 10px 15px !important;
+        border: none !important;
+        border-radius: 21px !important;
+        font-size: 16px !important; /* Prevents iOS zoom */
+        outline: none !important;
+        background: white !important;
+        color: #111b21 !important;
+        min-width: 0 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* ✅ Send button - WhatsApp style */
+    body.mobile-chat-active .btn-send {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background-color: #25d366 !important; /* WhatsApp green */
+        color: white !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 21px !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        cursor: pointer !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+    }
+    
+    body.mobile-chat-active .btn-send:active {
+        background-color: #20ba5a !important;
+    }
+    
+    /* ✅ Emoji picker above input */
+    body.mobile-chat-active .emoji-picker {
+        position: fixed !important;
+        bottom: 70px !important;
+        left: 10px !important;
+        right: 10px !important;
+        max-width: calc(100% - 20px) !important;
+        background: white !important;
+        border-radius: 10px !important;
+        padding: 10px !important;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.2) !important;
+        z-index: 999 !important;
+    }
+    
+    /* ✅ Make sure all input elements are visible */
+    body.mobile-chat-active #messageInput,
+    body.mobile-chat-active #imageBtn,
+    body.mobile-chat-active #emojiBtn,
+    body.mobile-chat-active #sendBtn {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* ✅ Hide typing indicator from covering input */
+    body.mobile-chat-active #ai-typing-indicator {
+        margin-bottom: 80px !important;
+    }
+}
+
+/* ==================== ENSURE INPUT SHOWS OVER EVERYTHING ==================== */
+.message-input-wrapper {
+    pointer-events: auto !important;
+}
+
+.message-input-wrapper * {
+    pointer-events: auto !important;
+}
+
+/* ================= MOBILE CHAT FIX (WHATSAPP STYLE) ================= */
+@media (max-width: 768px) {
+
+    /* Lock page */
+    html, body {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .main-content {
+        height: calc(100vh - 60px); /* header height */
+        overflow: hidden;
+    }
+
+    /* Chat area full height */
+    .chat-area {
+        flex: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: #e5ddd5;
+    }
+
+    .chat-screen {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* Messages scroll */
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+        padding-bottom: 80px; /* space for input */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* INPUT — ALWAYS VISIBLE */
+    .message-input-wrapper {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #fff;
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-top: 1px solid #ddd;
+        z-index: 999;
+    }
+
+    .message-input {
+        flex: 1;
+        font-size: 16px; /* stops iOS zoom */
+    }
+
+    /* Sidebar behavior */
+    body.mobile-chat-active .sidebar {
+        display: none;
+    }
+
+    body.mobile-chat-active .chat-area {
+        display: flex;
+    }
+}
+/* ==================== FINAL MOBILE FIX - ADD TO VERY END ==================== */
+
+@media (max-width: 768px) {
+    /* Mobile chat active state */
+    body.mobile-chat-active .message-input-wrapper {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        background: #f0f0f0 !important;
+        padding: 10px !important;
+        z-index: 99999 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1) !important;
+    }
+    
+    body.mobile-chat-active .input-container {
+        display: flex !important;
+        gap: 8px !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+    
+    body.mobile-chat-active .icon-btn {
+        display: inline-flex !important;
+        font-size: 24px !important;
+        padding: 8px !important;
+        background: none !important;
+        border: none !important;
+    }
+    
+    body.mobile-chat-active .message-input {
+        flex: 1 !important;
+        display: block !important;
+        padding: 10px 15px !important;
+        border-radius: 21px !important;
+        border: none !important;
+        font-size: 16px !important;
+        background: white !important;
+    }
+    
+    body.mobile-chat-active .btn-send {
+        display: inline-flex !important;
+        background: #25d366 !important;
+        color: white !important;
+        padding: 10px 20px !important;
+        border-radius: 21px !important;
+        border: none !important;
+        font-weight: 600 !important;
+    }
+    
+    body.mobile-chat-active .messages-container {
+        padding-bottom: 80px !important;
+    }
+    
+    body.mobile-chat-active #mobileBackBtn {
+        display: inline-flex !important;
+        color: #fff !important;
+    }
+}
+/* ================= MOBILE CHAT HEADER POLISH ================= */
+@media (max-width: 768px) {
+
+    .chat-header {
+        padding: 10px 12px;
+    }
+
+    .chat-user-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .chat-user-info h3,
+    .chat-user-info span {
+        font-size: 14px;
+        line-height: 1.2;
+    }
+
+    /* Group name container */
+    .chat-user-info > div:first-child {
+        flex: 1;
+        min-width: 0;
+        padding-right: 6px;
+    }
+
+    .chat-user-info h3 {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Group buttons */
+    .group-controls {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-left: 6px;
+    }
+
+    .group-controls button {
+        height: 24px;
+        padding: 4px 8px;
+        font-size: 10px;
+        border-radius: 12px;
+    }
+}
+
+
+</style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <div class="header-left">
+            <h1>MUL Connect</h1>
+            <p class="user-info">Welcome, <span id="currentUserName">User</span></p>
+        </div>
+        <button id="logoutBtn" class="btn-logout">Logout</button>
+    </header>
+
+    <main class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Conversations</h2>
+                <input type="text" id="searchUsers" class="search-input" placeholder="Search users...">
+            </div>
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <h4>Groups</h4>
+                    <button class="add-group-btn" id="openModalBtn">+</button>
+                </div>
+                <div id="groupsList" class="users-list"></div>
+            </div>
+            <div class="sidebar-section">
+                <div class="section-header"><h4>Direct Messages</h4></div>
+                <div id="usersList" class="users-list"></div>
+            </div>
+        </aside>
+
+        <!-- Chat Area -->
+        <section class="chat-area">
+            <div id="welcomeScreen" class="welcome-screen">
+                <div class="welcome-content">
+                    <h2>👋 Welcome to MUL Connect</h2>
+                    <p>Maranatha University Lagos Chat Platform</p>
+                </div>
+            </div>
+
+            <div id="chatScreen" class="chat-screen">
+
+                <div class="chat-header">
+                    <!-- MOBILE BACK BUTTON dynamically added -->
+                    <div class="chat-user-info">
+                        <div class="avatar" id="chatAvatar"></div>
+                        <div>
+                            <h3 id="chatUserName">User Name</h3>
+                            <span id="chatUserStatus">Online</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="messagesContainer" class="messages-container"></div>
+
+                <div id="ai-typing-indicator" class="typing-bubble" style="display: none;">
+                    <div class="typing-dots"><span></span><span></span><span></span></div>
+                    <small style="margin-left:5px; color:#666;">Mul Chat Bot is thinking...</small>
+                </div>
+
+                <div class="message-input-wrapper">
+                    <input type="file" id="imageInput" accept="image/*" style="display:none;">
+                    <div id="emojiPicker" class="emoji-picker" style="display:none;">
+                        <div class="emoji-grid">
+                            <span onclick="insertEmoji('😀')">😀</span>
+                            <span onclick="insertEmoji('😂')">😂</span>
+                            <span onclick="insertEmoji('😍')">😍</span>
+                            <span onclick="insertEmoji('😎')">😎</span>
+                            <span onclick="insertEmoji('👍')">👍</span>
+                            <span onclick="insertEmoji('🔥')">🔥</span>
+                        </div>
+                    </div>
+                    <div class="input-container">
+                        <button id="imageBtn" class="icon-btn" onclick="document.getElementById('imageInput').click()">📷</button>
+                        <button id="emojiBtn" class="icon-btn">😊</button>
+                        <input type="text" id="messageInput" class="message-input" placeholder="Type a message..."/>
+                        <button id="sendBtn" class="btn-send">Send</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div id="createGroupModal" class="modal">
+    <div class="modal-content">
+        <h3>Create Group</h3>
+        <input type="text" id="newGroupName" placeholder="Enter Group Name">
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+            <button id="closeModalBtn">Cancel</button>
+            <button id="confirmCreateGroup">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- ADD MEMBER MODAL -->
+<div id="addMemberModal" class="modal">
+    <div class="modal-content">
+        <h3>Add Members</h3>
+        <div id="addMemberList" style="max-height:300px; overflow-y:auto; margin-top:15px; border:1px solid #ddd; border-radius:8px;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+            <button id="cancelAddMembers">Cancel</button>
+            <button id="confirmAddMembers">Add Selected</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== MOBILE NAVIGATION FIX ====================
+(function() {
+    const isMobile = () => window.innerWidth <= 768;
+    
+    // Function to open chat on mobile
+    window.openMobileChat = function(userId, userName) {
+        if (isMobile()) {
+            document.body.classList.add('mobile-chat-active');
+            console.log('📱 Mobile: Opening chat for', userName);
+        }
+        // Call your existing openChat function
+        if (typeof openChat === 'function') {
+            openChat(userId, userName, true, false);
+        }
+    };
+    
+    // Function to go back to sidebar on mobile
+    window.closeMobileChat = function() {
+        if (isMobile()) {
+            document.body.classList.remove('mobile-chat-active');
+            console.log('📱 Mobile: Returning to sidebar');
+        }
+    };
+    
+    // Setup back button
+    document.addEventListener('DOMContentLoaded', () => {
+        const backBtn = document.getElementById('mobileBackBtn');
+        if (backBtn) {
+            backBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeMobileChat();
+            });
+        }
+        
+        // Prevent zoom on input focus (iOS)
+        document.querySelectorAll('input, textarea').forEach(input => {
+            input.addEventListener('focus', () => {
+                if (isMobile()) {
+                    input.style.fontSize = '16px';
+                }
+            });
+        });
+    });
+    
+    // Handle orientation change
+    window.addEventListener('resize', () => {
+        if (!isMobile()) {
+            document.body.classList.remove('mobile-chat-active');
+        }
+    });
+})();
+
+
+</script>
+
+<script src="./socket.io/socket.io.js"></script>
+<script src="./js/chat.js"></script>
+
+<script>
+// ==================== REPLACE ALL <script> TAGS IN YOUR HTML WITH THIS ====================
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.querySelector('.sidebar');
+    const chatScreen = document.getElementById('chatScreen');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const chatUserName = document.getElementById('chatUserName');
+    const messagesContainer = document.getElementById('messagesContainer');
+    const searchInput = document.getElementById('searchUsers');
+    let currentChat = null;
+
+    // ===== MOBILE BACK BUTTON SETUP =====
+    let mobileBackBtn = document.getElementById('mobileBackBtn');
+    if (!mobileBackBtn) {
+        mobileBackBtn = document.createElement('button');
+        mobileBackBtn.id = 'mobileBackBtn';
+        mobileBackBtn.innerHTML = '← Back';
+        mobileBackBtn.style.cssText = `
+            display: none;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            padding: 5px 10px;
+            margin-right: 10px;
+        `;
+        const chatHeader = document.querySelector('.chat-header');
+        if (chatHeader) {
+            chatHeader.insertBefore(mobileBackBtn, chatHeader.firstChild);
+        }
+    }
+
+    mobileBackBtn.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            document.body.classList.remove('mobile-chat-active');
+            mobileBackBtn.style.display = 'none';
+            resetChatState();
+        }
+    });
+
+    function resetChatState() {
+        currentChat = null;
+        chatUserName.textContent = '';
+        messagesContainer.innerHTML = '';
+        chatScreen.classList.remove('active-chat');
+        
+        if (window.innerWidth > 768) {
+            welcomeScreen.style.display = 'flex';
+        }
+    }
+
+    // ===== FORCE INPUT VISIBLE ON MOBILE =====
+    function forceShowInput() {
+        if (window.innerWidth <= 768 && document.body.classList.contains('mobile-chat-active')) {
+            const wrapper = document.querySelector('.message-input-wrapper');
+            const container = document.querySelector('.input-container');
+            const input = document.getElementById('messageInput');
+            const imageBtn = document.getElementById('imageBtn');
+            const emojiBtn = document.getElementById('emojiBtn');
+            const sendBtn = document.getElementById('sendBtn');
+            
+            if (wrapper) {
+                wrapper.style.cssText = 'position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; background: #f0f0f0 !important; padding: 10px !important; z-index: 9999 !important; display: flex !important; flex-direction: column !important;';
+            }
+            if (container) {
+                container.style.cssText = 'display: flex !important; gap: 8px !important; align-items: center !important;';
+            }
+            if (input) {
+                input.style.cssText = 'flex: 1 !important; display: block !important; visibility: visible !important; padding: 10px 15px !important; border-radius: 21px !important; border: none !important; font-size: 16px !important;';
+            }
+            if (imageBtn) {
+                imageBtn.style.cssText = 'display: inline-flex !important; visibility: visible !important; font-size: 24px !important; padding: 8px !important;';
+            }
+            if (emojiBtn) {
+                emojiBtn.style.cssText = 'display: inline-flex !important; visibility: visible !important; font-size: 24px !important; padding: 8px !important;';
+            }
+            if (sendBtn) {
+                sendBtn.style.cssText = 'display: inline-flex !important; visibility: visible !important; background: #25d366 !important; color: white !important; padding: 10px 20px !important; border-radius: 21px !important; border: none !important;';
+            }
+            
+            console.log('✅ Input forced visible');
+        }
+    }
+
+    // ===== OPEN CHAT FUNCTION (HANDLES BOTH USERS AND GROUPS) =====
+    window.openChat = function(id, name, isOnline, isGroup) {
+        
+        console.log('📱 Opening chat:', name, 'Is Group:', isGroup);
+        window.activeChat = { id, name, isGroup };
+        currentChat = { id, name, isGroup };
+        
+        // Hide welcome
+        if (welcomeScreen) welcomeScreen.style.display = 'none';
+        if (chatScreen) {
+            chatScreen.style.display = 'flex';
+            chatScreen.classList.add('active-chat');
+        }
+        
+        // Update header
+        if (chatUserName) {
+            chatUserName.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                    <span>${name}</span>
+                    ${isGroup ? `
+                        <div class="group-controls">
+                            <button class="btn-add" onclick="openAddMemberModal('${id}')">Add Member</button>
+                            <button class="btn-delete" onclick="deleteGroup('${id}')">Delete Group</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+        
+        // Update status
+        const chatUserStatus = document.getElementById('chatUserStatus');
+        if (chatUserStatus && !isGroup) {
+            chatUserStatus.textContent = isOnline ? 'Online' : 'Offline';
+            chatUserStatus.className = isOnline ? 'status-online' : 'status-offline';
+        } else if (chatUserStatus) {
+            chatUserStatus.textContent = '';
+        }
+        
+        // Mobile mode
+        if (window.innerWidth <= 768) {
+            document.body.classList.add('mobile-chat-active');
+            if (mobileBackBtn) {
+                mobileBackBtn.style.display = 'inline-flex';
+            }
+            // Force input visible after short delay
+            setTimeout(forceShowInput, 100);
+        }
+        
+        // Join group room if needed
+        if (isGroup && typeof socket !== 'undefined') {
+            socket.emit('join_group', id);
+        }
+        
+        // Load messages
+        if (typeof loadMessages === 'function') {
+            loadMessages(id, isGroup);
+        }
+    };
+
+    // ===== ATTACH CLICK EVENTS TO USERS/GROUPS =====
+    function attachUserClicks() {
+    document.querySelectorAll('.user-item, .group-item').forEach(item => {
+
+        // 🚫 DO NOT OVERRIDE EXISTING ONCLICK (groups rely on it)
+        if (item.getAttribute('onclick')) return;
+
+        if (!item.dataset.clickAttached) {
+            item.addEventListener('click', function () {
+                const nameEl = this.querySelector('h4');
+                const name = nameEl ? nameEl.textContent.trim() : 'User';
+                const isGroup = this.classList.contains('group-item');
+                const id = this.dataset.userId || this.dataset.groupId;
+
+                openChat(id, name, true, isGroup);
+            });
+
+            item.dataset.clickAttached = 'true';
+        }
+    });
+}
+
+
+    // Initial attach
+    attachUserClicks();
+
+    // Observer for dynamic additions
+    const observer = new MutationObserver(attachUserClicks);
+    const usersList = document.getElementById('usersList');
+    const groupsList = document.getElementById('groupsList');
+    if (usersList) observer.observe(usersList, { childList: true });
+    if (groupsList) observer.observe(groupsList, { childList: true });
+
+    // ===== SEARCH FUNCTIONALITY =====
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            const term = searchInput.value.toLowerCase().trim();
+            document.querySelectorAll('.user-item, .group-item').forEach(item => {
+                const nameEl = item.querySelector('h4');
+                item.style.display = nameEl && nameEl.textContent.toLowerCase().includes(term) ? 'flex' : 'none';
+            });
+        });
+    }
+
+    // ===== LOGOUT =====
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        });
+    }
+
+    // ===== INITIAL STATE =====
+    if (window.innerWidth > 768) {
+        welcomeScreen.style.display = 'flex';
+    } else {
+        welcomeScreen.style.display = 'none';
+    }
+
+    // ===== RESIZE HANDLER =====
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            document.body.classList.remove('mobile-chat-active');
+        } else if (document.body.classList.contains('mobile-chat-active')) {
+            forceShowInput();
+        }
+    });
+
+    console.log('✅ Chat interface initialized');
+});
+
+// ===== PREVENT IOS ZOOM ON INPUT FOCUS =====
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('input, textarea').forEach(input => {
+        input.addEventListener('focus', () => {
+            if (window.innerWidth <= 768) {
+                input.style.fontSize = '16px';
+            }
+        });
+    });
+});
+
+// ==================== ADD THIS TO YOUR SCRIPT (AFTER DOMContentLoaded) ====================
+
+// Send message function
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    
+    if (!content) {
+        console.log('❌ Empty message, not sending');
+        return;
+    }
+    
+    if (!window.activeChat) {
+        console.log('❌ No active chat selected');
+        alert('Please select a chat first');
+        return;
+    }
+    
+    console.log('📤 Sending message:', content);
+    
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = currentUser.id || currentUser._id;
+    
+    const messageData = {
+        senderId: userId,
+        sender: userId, // Add both formats
+        content: content,
+        messageType: window.activeChat.isGroup ? 'group' : 'direct',
+        timestamp: Date.now()
+    };
+    
+    if (window.activeChat.isGroup) {
+        messageData.groupId = window.activeChat.id;
+        messageData.group = window.activeChat.id;
+    } else {
+        messageData.receiverId = window.activeChat.id;
+        messageData.recipient = window.activeChat.id;
+        messageData.receiver = window.activeChat.id;
+    }
+    
+    console.log('💬 Message data:', messageData);
+    
+    // ✅ IMMEDIATELY SHOW MESSAGE IN UI (Optimistic update)
+    if (typeof appendMessage === 'function') {
+        appendMessage(messageData);
+        console.log('✅ Message displayed immediately');
+    } else {
+        // Fallback: manually append
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message sent';
+            msgDiv.innerHTML = `
+                <div class="message-bubble">
+                    <p>${escapeHtml(content)}</p>
+                    <span class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+            `;
+            messagesContainer.appendChild(msgDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            console.log('✅ Message appended manually');
+        }
+    }
+    
+    // Send via socket
+    if (typeof socket !== 'undefined') {
+        socket.emit('send_message', messageData);
+        console.log('✅ Message sent to server');
+    } else {
+        console.error('❌ Socket not defined');
+        alert('Connection error. Please refresh the page.');
+    }
+    
+    // Clear input
+    input.value = '';
+}
+
+// Helper function
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Make functions global
+window.sendMessage = sendMessage;
+window.escapeHtml = escapeHtml;
+
+// Attach send button click handler
+document.addEventListener('DOMContentLoaded', () => {
+    const sendBtn = document.getElementById('sendBtn');
+    const messageInput = document.getElementById('messageInput');
+    
+    if (sendBtn) {
+        // Remove any existing listeners
+        sendBtn.replaceWith(sendBtn.cloneNode(true));
+        const newSendBtn = document.getElementById('sendBtn');
+        
+        newSendBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('🖱️ Send button clicked');
+            sendMessage();
+        });
+        
+        console.log('✅ Send button handler attached');
+    }
+    
+    if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                console.log('⌨️ Enter key pressed');
+                sendMessage();
+            }
+        });
+        
+        console.log('✅ Enter key handler attached');
+    }
+    
+    // Emoji button
+    const emojiBtn = document.getElementById('emojiBtn');
+    if (emojiBtn) {
+        emojiBtn.addEventListener('click', () => {
+            const picker = document.getElementById('emojiPicker');
+            if (picker) {
+                picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+    }
+    
+    // Image button
+    const imageBtn = document.getElementById('imageBtn');
+    const imageInput = document.getElementById('imageInput');
+    if (imageInput) {
+        imageInput.addEventListener('change', () => {
+            const file = imageInput.files[0];
+            if (file) {
+                console.log('📷 Image selected:', file.name);
+                // Call your existing sendImage function
+                if (typeof sendImage === 'function') {
+                    sendImage();
+                }
+            }
+        });
+    }
+});
+
+// Make sendMessage globally accessible
+window.sendMessage = sendMessage;
+
+console.log('✅ Message sending functionality loaded');
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof socket !== 'undefined') {
+        
+        // Remove existing listeners
+        socket.off('message_sent');
+        socket.off('receive_message');
+        
+        // ✅ Listen for message confirmation (YOUR messages)
+        socket.on('message_sent', (msg) => {
+            console.log('✅ Server confirmed message sent:', msg);
+            
+            // Display your sent message
+            if (typeof appendMessage === 'function') {
+                appendMessage(msg);
+            } else {
+                displayMessage(msg, true); // true = sent by you
+            }
+            
+            // Scroll to bottom
+            const container = document.getElementById('messagesContainer');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        });
+        
+        // ✅ Listen for incoming messages (OTHER people's messages)
+        socket.on('receive_message', (msg) => {
+            console.log('📥 Received message from others:', msg);
+            
+            if (!window.activeChat) return;
+            
+            const senderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const myId = (currentUser.id || currentUser._id).toString();
+            
+            // ✅ Only show if it's NOT from you (to avoid duplicates)
+            if (senderId === myId) {
+                console.log('⏭️ Skipping - this is your own message');
+                return;
+            }
+            
+            let isForCurrentChat = false;
+            
+            if (window.activeChat.isGroup) {
+                if (msg.group === window.activeChat.id || msg.groupId === window.activeChat.id) {
+                    isForCurrentChat = true;
+                }
+            } else {
+                const isFromPartner = (senderId === window.activeChat.id);
+                if (isFromPartner) {
+                    isForCurrentChat = true;
+                }
+            }
+            
+            if (isForCurrentChat) {
+                if (typeof appendMessage === 'function') {
+                    appendMessage(msg);
+                } else {
+                    displayMessage(msg, false); // false = received
+                }
+                
+                // Scroll to bottom
+                const container = document.getElementById('messagesContainer');
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            }
+        });
+        
+        console.log('✅ Socket message handlers attached (fixed duplicates)');
+    }
+});
+// ==================== COMPLETE FIX - ADD TO YOUR INLINE SCRIPT ====================
+
+// ===== 1. EMOJI FUNCTIONALITY =====
+function insertEmoji(emoji) {
+    const input = document.getElementById('messageInput');
+    if (input) {
+        input.value += emoji;
+        input.focus();
+        console.log('✅ Inserted emoji:', emoji);
+        
+        // Close picker
+        const picker = document.getElementById('emojiPicker');
+        if (picker) picker.style.display = 'none';
+    }
+}
+
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emojiPicker');
+    if (picker) {
+        const isHidden = picker.style.display === 'none' || picker.style.display === '';
+        picker.style.display = isHidden ? 'block' : 'none';
+        console.log('Emoji picker:', isHidden ? 'opened' : 'closed');
+    }
+}
+
+// Close emoji picker when clicking outside
+document.addEventListener('click', function(e) {
+    const picker = document.getElementById('emojiPicker');
+    const emojiBtn = document.getElementById('emojiBtn');
+    
+    if (picker && emojiBtn && 
+        !picker.contains(e.target) && 
+        !emojiBtn.contains(e.target) &&
+        picker.style.display === 'block') {
+        picker.style.display = 'none';
+    }
+});
+
+// Make emoji functions global
+window.insertEmoji = insertEmoji;
+window.toggleEmojiPicker = toggleEmojiPicker;
+
+// ===== 2. IMAGE SENDING FUNCTIONALITY =====
+function sendImage() {
+    const fileInput = document.getElementById('imageInput');
+    const file = fileInput?.files?.[0];
+    
+    if (!file) {
+        console.log('❌ No file selected');
+        return;
+    }
+    
+    if (!window.activeChat) {
+        alert('Please select a chat first');
+        return;
+    }
+    
+    console.log('📷 Processing image:', file.name);
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Image = e.target.result;
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const userId = currentUser.id || currentUser._id;
+        
+        const messageData = {
+            senderId: userId,
+            sender: userId,
+            content: '[Image]',
+            messageType: 'image',
+            imageUrl: base64Image,
+            timestamp: Date.now()
+        };
+        
+        if (window.activeChat.isGroup) {
+            messageData.groupId = window.activeChat.id;
+            messageData.group = window.activeChat.id;
+        } else {
+            messageData.receiverId = window.activeChat.id;
+            messageData.recipient = window.activeChat.id;
+            messageData.receiver = window.activeChat.id;
+        }
+        
+        console.log('📤 Sending image message');
+        
+        // ✅ DON'T display immediately - let the socket handler do it
+        // This prevents duplicates
+        
+        // Send to server
+        if (typeof socket !== 'undefined') {
+            socket.emit('send_message', messageData);
+            console.log('✅ Image sent to server');
+        } else {
+            alert('Connection error. Please refresh the page.');
+        }
+        
+        // Clear file input
+        fileInput.value = '';
+    };
+    
+    reader.onerror = function() {
+        console.error('❌ Error reading file');
+        alert('Error uploading image');
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+window.sendImage = sendImage;
+
+
+// ===== 3. GROUP FUNCTIONALITY =====
+function openAddMemberModal(groupId) {
+    console.log('🔵 Opening add member modal for group:', groupId);
+    
+    const modal = document.getElementById('addMemberModal');
+    const listContainer = document.getElementById('addMemberList');
+    
+    if (!modal) {
+        console.error('❌ addMemberModal not found in DOM');
+        alert('Error: Modal not found');
+        return;
+    }
+    
+    if (!listContainer) {
+        console.error('❌ addMemberList not found in DOM');
+        alert('Error: Member list container not found');
+        return;
+    }
+    
+    console.log('✅ Modal elements found');
+    
+    listContainer.innerHTML = '<p style="padding: 10px;">Loading users...</p>';
+    modal.style.display = 'flex';
+    
+    console.log('✅ Modal displayed');
+    
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const myId = (currentUser.id || currentUser._id).toString();
+    const token = localStorage.getItem('token');
+    const AI_BOT_ID = "677d9c66e765432101234567";
+    
+    console.log('🔍 Fetching users...');
+    
+    fetch('http://localhost:3000/api/auth/users', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => {
+        console.log('📡 Users API response status:', res.status);
+        return res.json();
+    })
+    .then(data => {
+        console.log('📦 Users data received:', data);
+        
+        const allUsers = Array.isArray(data) ? data : (data.users || []);
+        console.log('👥 Total users:', allUsers.length);
+        
+        const selectableUsers = allUsers.filter(u => {
+            const userId = (u._id || u.id).toString();
+            return userId !== myId && userId !== AI_BOT_ID;
+        });
+        
+        console.log('✅ Selectable users:', selectableUsers.length);
+        
+        listContainer.innerHTML = '';
+        
+        if (selectableUsers.length === 0) {
+            listContainer.innerHTML = '<p style="padding: 10px; text-align: center; color: #999;">No users available</p>';
+            return;
+        }
+        
+        selectableUsers.forEach(user => {
+            const div = document.createElement('div');
+            div.className = 'member-selection-item';
+            div.style.cssText = 'display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #eee;';
+            div.innerHTML = `
+                <div class="avatar" style="width:30px; height:30px; font-size:12px; margin-right: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold;">${user.name.charAt(0)}</div>
+                <label for="chk-${user._id}" style="flex: 1; cursor: pointer;">${user.name}</label>
+                <input type="checkbox" id="chk-${user._id}" value="${user._id}" class="member-checkbox" style="cursor: pointer; width: 18px; height: 18px;">
+            `;
+            listContainer.appendChild(div);
+        });
+        
+        console.log('✅ User list rendered');
+    })
+    .catch(err => {
+        console.error('❌ Error loading users:', err);
+        listContainer.innerHTML = '<p style="padding: 10px; color: red;">Error loading users. Check console.</p>';
+    });
+    
+    // Attach confirm button
+    const confirmBtn = document.getElementById('confirmAddMembers');
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            console.log('🔵 Confirm button clicked');
+            submitAddMembers(groupId);
+        };
+        console.log('✅ Confirm button handler attached');
+    } else {
+        console.error('❌ confirmAddMembers button not found');
+    }
+}
+
+async function submitAddMembers(groupId) {
+    console.log('🔵 Submitting members for group:', groupId);
+    
+    const checkboxes = document.querySelectorAll('.member-checkbox:checked');
+    console.log('✅ Checked boxes:', checkboxes.length);
+    
+    const userIds = Array.from(checkboxes).map(cb => cb.value);
+    console.log('👥 User IDs to add:', userIds);
+    
+    if (userIds.length === 0) {
+        alert("Please select at least one person.");
+        return;
+    }
+    
+    const token = localStorage.getItem('token');
+    
+    for (const userId of userIds) {
+        console.log(`📤 Adding user ${userId} to group ${groupId}...`);
+        
+        try {
+            const res = await fetch(`http://localhost:3000/api/groups/${groupId}/add-member`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId })
+            });
+            
+            console.log('📡 Add member response status:', res.status);
+            
+            if (!res.ok) {
+                const error = await res.json();
+                console.error('❌ Error:', error);
+            } else {
+                const result = await res.json();
+                console.log('✅ User added:', result);
+            }
+        } catch (err) {
+            console.error('❌ Network error:', err);
+        }
+    }
+    
+    alert("✅ Members added!");
+    closeAddMemberModal();
+    
+    // Reload groups
+    if (typeof loadGroups === 'function') {
+        console.log('🔄 Reloading groups...');
+        loadGroups();
+    }
+}
+
+window.openAddMemberModal = openAddMemberModal;
+window.submitAddMembers = submitAddMembers;
+
+console.log('✅ Fixed image duplicates and enhanced group debugging');
+
+function displayMessage(msg, isSent) {
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (!messagesContainer) return;
+    
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const senderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+    const senderName = typeof msg.sender === 'object' ? msg.sender.name : 'User';
+    const myId = (currentUser.id || currentUser._id).toString();
+    
+    // Determine if sent or received
+    const className = (senderId === myId || isSent) ? 'sent' : 'received';
+    
+    let contentHTML = '';
+    if (msg.imageUrl) {
+        contentHTML = `<img src="${msg.imageUrl}" class="message-image" style="max-width: 100%; max-height: 300px; border-radius: 10px; cursor: pointer;" onclick="openImageModal('${msg.imageUrl}')" alt="Image">`;
+    }
+    if (msg.content && msg.content !== '[Image]') {
+        contentHTML += `<p>${escapeHtml(msg.content)}</p>`;
+    }
+    
+    const timestamp = msg.timestamp || msg.createdAt || Date.now();
+    const timeStr = new Date(timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message ${className}`;
+    msgDiv.innerHTML = `
+        <div class="message-bubble">
+            ${!isSent && window.activeChat?.isGroup ? `<small style="display:block; font-weight:bold; color:#007bff; margin-bottom:4px;">${senderName}</small>` : ''}
+            ${contentHTML}
+            <span class="message-time">${timeStr}</span>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(msgDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+window.displayMessage = displayMessage;
+
+function closeAddMemberModal() {
+    const modal = document.getElementById('addMemberModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function deleteGroup(groupId) {
+    if (!confirm("Are you sure you want to delete this group?")) return;
+    
+    console.log('Deleting group:', groupId);
+    
+    const token = localStorage.getItem('token');
+    
+    try {
+        const res = await fetch(`http://localhost:3000/api/groups/${groupId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+            alert("✅ Group deleted");
+            window.location.reload();
+        } else {
+            const error = await res.json();
+            alert(error.error || "Only the creator can delete this group");
+        }
+    } catch (err) {
+        console.error('Error deleting group:', err);
+        alert('Error deleting group');
+    }
+}
+
+// Make group functions global
+window.openAddMemberModal = openAddMemberModal;
+window.submitAddMembers = submitAddMembers;
+window.closeAddMemberModal = closeAddMemberModal;
+window.deleteGroup = deleteGroup;
+
+// ===== 4. ATTACH EVENT HANDLERS =====
+document.addEventListener('DOMContentLoaded', () => {
+    // Emoji button
+    const emojiBtn = document.getElementById('emojiBtn');
+    if (emojiBtn) {
+        emojiBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleEmojiPicker();
+        });
+        console.log('✅ Emoji button attached');
+    }
+    
+    // Image button (already triggers file input via onclick in HTML)
+    const imageInput = document.getElementById('imageInput');
+    if (imageInput) {
+        imageInput.addEventListener('change', sendImage);
+        console.log('✅ Image input attached');
+    }
+    
+    // Cancel buttons for modals
+    const cancelAddBtn = document.getElementById('cancelAddMembers');
+    if (cancelAddBtn) {
+        cancelAddBtn.addEventListener('click', closeAddMemberModal);
+    }
+    
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            const modal = document.getElementById('createGroupModal');
+            if (modal) modal.style.display = 'none';
+        });
+    }
+    
+    console.log('✅ All event handlers attached');
+});
+
+console.log('✅ Emoji, Image, and Group functionality loaded');
+
+document.addEventListener('DOMContentLoaded', () => {
+    const openBtn = document.getElementById('openModalBtn');
+    const modal = document.getElementById('createGroupModal');
+    const closeBtn = document.getElementById('closeModalBtn');
+
+    if (openBtn && modal) {
+        openBtn.addEventListener('click', () => {
+            modal.style.display = 'flex';
+            console.log('✅ Create Group modal opened');
+        });
+    }
+
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            console.log('❌ Create Group modal closed');
+        });
+    }
+
+    // Click outside modal-content closes it (safe)
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+});
+
+</script>
+
+
+</body>
+</html>
