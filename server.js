@@ -22,7 +22,8 @@ const io = socketIO(server, {
 
 // INITIALIZE AI
 // ✅ Use the name you imported at the top of the file
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// ✅ Change "genAI" to "client" to match your later code
+const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const AI_BOT_ID = "677d9c66e765432101234567";
 
 // AI Model configuration - UPDATED FOR 2026
@@ -136,9 +137,11 @@ socket.on('send_message', async (data) => {
 
     try {
         // ✅ The new 2026 way to call the model
-        const response = await client.models.generateContent({
+       // ✅ This must use "client" because we named it "client" at the top
+            const response = await client.models.generateContent({
             model: AI_MODELS.primary,
             contents: [{ role: 'user', parts: [{ text: content || "Hello" }] }]
+        });
         });
 
         const aiText = response.text; // Simple .text property in the new SDK
@@ -232,6 +235,7 @@ server.listen(PORT, () => {
     console.log(`🧠 AI Models configured:`, AI_MODELS);
 
 });
+
 
 
 
