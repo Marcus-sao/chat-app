@@ -162,7 +162,7 @@ window.isMobile = isMobile;
 
 console.log('✅ Mobile navigation script loaded');
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = window.location.origin + '/api';
 const AI_BOT_ID = "677d9c66e765432101234567"; 
 
 const token = localStorage.getItem('token');
@@ -174,7 +174,7 @@ if (!token || !currentUser.id) {
     window.location.href = '/login.html'; 
 }
 
-const socket = io('http://localhost:3000');
+const socket = io();
 socket.emit('user_connected', currentUser.id);
 
 console.log('Chat.js loaded successfully');
@@ -954,5 +954,6 @@ window.openImageModal = openImageModal;
 window.insertEmoji = insertEmoji;
 window.toggleEmojiPicker = toggleEmojiPicker;
 window.logout = logout;
+
 
 console.log('All functions loaded and ready!');
