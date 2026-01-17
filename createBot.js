@@ -1,6 +1,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const User = require('../models/user');
+const User = require('./models/user');
 
 const AI_BOT_ID = "677d9c66e765432101234567";
 
@@ -22,4 +22,5 @@ async function createBot() {
     }
     process.exit();
 }
+
 createBot();
