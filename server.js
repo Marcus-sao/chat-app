@@ -21,7 +21,8 @@ const io = socketIO(server, {
 });
 
 // INITIALIZE AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// ✅ Use the name you imported at the top of the file
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const AI_BOT_ID = "677d9c66e765432101234567";
 
 // AI Model configuration - UPDATED FOR 2026
@@ -231,6 +232,7 @@ server.listen(PORT, () => {
     console.log(`🧠 AI Models configured:`, AI_MODELS);
 
 });
+
 
 
 
