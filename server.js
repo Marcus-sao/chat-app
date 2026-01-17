@@ -12,7 +12,7 @@ const authRoutes = require('./routes/auth');
 const messageRoutes = require('./routes/messages');
 const groupRoutes = require('./routes/groups');
 const Message = require('./models/message');
-const User = require('../models/user');
+const User = require('./models/user');
 
 const app = express();
 const server = http.createServer(app);
@@ -216,4 +216,5 @@ server.listen(PORT, () => {
     console.log(`📁 Uploads directory: ${uploadsDir}`);
     console.log(`🤖 AI Bot ID: ${AI_BOT_ID}`);
     console.log(`🧠 AI Models configured:`, AI_MODELS);
+
 });
