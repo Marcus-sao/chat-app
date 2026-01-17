@@ -6,7 +6,9 @@ const http = require('http');
 const socketIO = require('socket.io');
 const path = require('path');
 const fs = require('fs');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+// ✅ UPDATED 2026: Using the new stable library
+const { GoogleGenAI } = require('@google/genai');
 
 const authRoutes = require('./routes/auth');
 const messageRoutes = require('./routes/messages');
@@ -20,16 +22,16 @@ const io = socketIO(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// INITIALIZE AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// ✅ INITIALIZE AI CLIENT (2026 Style)
+const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const AI_BOT_ID = "677d9c66e765432101234567";
 
-// AI Model configuration - UPDATED FOR 2026
+// ✅ AI Model configuration - GEMINI 3 IS NOW STABLE
 const AI_MODELS = {
-    primary: "gemini-1.5-flash", // Remove "-latest" and "2.5"
-    fallback: "gemini-pro",
-    legacy: "gemini-pro"
+    primary: "gemini-3-flash", 
+    fallback: "gemini-3-pro"
 };
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static('public'));
@@ -40,11 +42,8 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Make io accessible to routes
 app.set('io', io);
 
-// This version uses your online link on Render, 
-// but still works on your personal computer (local) if the link is missing.
 const dbURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/chat-app';
 
 mongoose.connect(dbURI)
@@ -67,15 +66,12 @@ const activeUsers = {};
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
-    // ✅ User connects - set online status
     socket.on('user_connected', async (userId) => {
         if (!userId) return;
         activeUsers[userId] = socket.id;
         
         try {
             await User.findByIdAndUpdate(userId, { isOnline: true });
-            
-            // Tell everyone to refresh their lists
             io.emit('user_status_changed', { userId, isOnline: true });
             io.emit('users_updated', Object.keys(activeUsers));
         } catch (error) {
@@ -84,92 +80,88 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join_group', (groupId) => {
-    socket.join(groupId);
-    console.log(`User ${socket.id} joined room: ${groupId}`);
-});
+        socket.join(groupId);
+        console.log(`User ${socket.id} joined room: ${groupId}`);
+    });
 
-socket.on('send_message', async (data) => {
-    try {
-        const { senderId, receiverId, groupId, content, imageUrl } = data;
+    socket.on('send_message', async (data) => {
+        try {
+            const { senderId, receiverId, groupId, content, imageUrl } = data;
 
-        const msgData = {
-            sender: senderId,
-            content: content || "",
-            imageUrl: imageUrl || null,
-            messageType: groupId ? 'group' : 'direct',
-            createdAt: new Date()
-        };
+            const msgData = {
+                sender: senderId,
+                content: content || "",
+                imageUrl: imageUrl || null,
+                messageType: groupId ? 'group' : 'direct',
+                createdAt: new Date()
+            };
 
-        if (groupId) {
-            msgData.group = groupId;
-        } else {
-            msgData.receiver = receiverId;
-            // keep BOTH for schema compatibility
-        }
-
-        // ✅ Save once
-        const savedMsg = await Message.create(msgData);
-
-        // ✅ Populate sender
-        const populatedMsg = await Message.findById(savedMsg._id)
-            .populate('sender', 'name username');
-
-        // ✅ GROUP CHAT
-        if (groupId) {
-            io.to(groupId).emit('receive_message', populatedMsg);
-            return;
-        }
-
-        // ✅ DIRECT CHAT
-        // send to sender
-        socket.emit('receive_message', populatedMsg);
-
-        // send to receiver
-        if (activeUsers[receiverId]) {
-            io.to(activeUsers[receiverId]).emit('receive_message', populatedMsg);
-        }
-
-        // ✅ AI BOT (direct only)
-        if (receiverId === AI_BOT_ID) {
-            socket.emit('ai_typing', { isTyping: true });
-
-            try {
-                // ✅ Use the stable model, not the beta one
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                const result = await model.generateContent(content || "Hello");
-                const aiText = result.response.text();
-
-                const aiMsg = await Message.create({
-                    sender: AI_BOT_ID,
-                    receiver: senderId,
-                    recipient: senderId,
-                    content: aiText,
-                    messageType: 'direct',
-                    createdAt: new Date()
-                });
-
-                socket.emit('receive_message', {
-                    ...aiMsg.toJSON(),
-                    sender: {
-                        _id: AI_BOT_ID,
-                        name: "Mul Chat Bot",
-                        username: "mulchatbot"
-                    }
-                });
-
-            } finally {
-                socket.emit('ai_typing', { isTyping: false });
+            if (groupId) {
+                msgData.group = groupId;
+            } else {
+                msgData.receiver = receiverId;
             }
+
+            const savedMsg = await Message.create(msgData);
+            const populatedMsg = await Message.findById(savedMsg._id)
+                .populate('sender', 'name username');
+
+            if (groupId) {
+                io.to(groupId).emit('receive_message', populatedMsg);
+                return;
+            }
+
+            socket.emit('receive_message', populatedMsg);
+
+            if (activeUsers[receiverId]) {
+                io.to(activeUsers[receiverId]).emit('receive_message', populatedMsg);
+            }
+
+            // ✅ AI BOT LOGIC - UPDATED FOR 2026 SDK
+            if (receiverId === AI_BOT_ID) {
+                socket.emit('ai_typing', { isTyping: true });
+
+                try {
+                    // New generateContent call structure
+                    const response = await client.models.generateContent({
+                        model: AI_MODELS.primary,
+                        contents: [{ role: 'user', parts: [{ text: content || "Hello" }] }]
+                    });
+
+                    const aiText = response.text; // Direct access to text
+
+                    const aiMsg = await Message.create({
+                        sender: AI_BOT_ID,
+                        receiver: senderId,
+                        recipient: senderId,
+                        content: aiText,
+                        messageType: 'direct',
+                        createdAt: new Date()
+                    });
+
+                    socket.emit('receive_message', {
+                        ...aiMsg.toJSON(),
+                        sender: {
+                            _id: AI_BOT_ID,
+                            name: "Mul Chat Bot",
+                            username: "mulchatbot"
+                        }
+                    });
+
+                } catch (aiErr) {
+                    console.error('🤖 AI Generation Error:', aiErr);
+                    socket.emit('message_error', { error: 'AI is busy, try again later.' });
+                } finally {
+                    socket.emit('ai_typing', { isTyping: false });
+                }
+            }
+
+        } catch (err) {
+            console.error('❌ send_message error:', err);
+            socket.emit('message_error', { error: 'Message failed to send' });
         }
+    });
 
-    } catch (err) {
-        console.error('❌ send_message error:', err);
-        socket.emit('message_error', { error: 'Message failed to send' });
-    }
-});
-
-
-    // Handle typing indicators
     socket.on('typing', (data) => {
         const { receiverId, isTyping } = data;
         if (activeUsers[receiverId]) {
@@ -177,40 +169,24 @@ socket.on('send_message', async (data) => {
         }
     });
 
-    socket.on('group_typing', (data) => {
-        const { groupId, userId, username, isTyping } = data;
-        socket.to(groupId).emit('user_group_typing', { 
-            userId, 
-            username, 
-            isTyping 
-        });
-    });
-
-    // ✅ User disconnects - set offline status
     socket.on('disconnect', async () => {
         let foundUserId = null;
-        
-        // Find who owned this socket
         for (const [userId, socketId] of Object.entries(activeUsers)) {
             if (socketId === socket.id) {
                 foundUserId = userId;
-                delete activeUsers[userId]; // Remove from online list
+                delete activeUsers[userId];
                 break;
             }
         }
 
         if (foundUserId) {
             try {
-                // Update DB to offline
                 await User.findByIdAndUpdate(foundUserId, { 
                     isOnline: false, 
                     lastSeen: new Date() 
                 });
-                
-                // Tell everyone they are gone
                 io.emit('user_status_changed', { userId: foundUserId, isOnline: false });
                 io.emit('users_updated', Object.keys(activeUsers));
-                console.log(`👤 User ${foundUserId} went offline.`);
             } catch (err) {
                 console.error("Disconnect Error:", err);
             }
@@ -221,13 +197,6 @@ socket.on('send_message', async (data) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📁 Uploads directory: ${uploadsDir}`);
-    console.log(`🤖 AI Bot ID: ${AI_BOT_ID}`);
-    console.log(`🧠 AI Models configured:`, AI_MODELS);
-
+    console.log(`🤖 AI Bot Active: ${AI_BOT_ID}`);
+    console.log(`🧠 Model: ${AI_MODELS.primary}`);
 });
-
-
-
-
-
