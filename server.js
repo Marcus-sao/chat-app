@@ -26,7 +26,7 @@ const AI_BOT_ID = "677d9c66e765432101234567";
 
 // AI Model configuration - UPDATED FOR 2026
 const AI_MODELS = {
-    primary: "gemini-1.5-flash", // Use 2.5 Flash for the best speed/reliability
+    primary: "gemini-1.5-flash-latest", // Use 2.5 Flash for the best speed/reliability
     fallback: "gemini-2.5-pro",
     legacy: "gemini-2.0-flash"
 };
@@ -134,7 +134,7 @@ socket.on('send_message', async (data) => {
             socket.emit('ai_typing', { isTyping: true });
 
             try {
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
                 const result = await model.generateContent(content || "Hello");
                 const aiText = result.response.text();
 
@@ -225,6 +225,7 @@ server.listen(PORT, () => {
     console.log(`🧠 AI Models configured:`, AI_MODELS);
 
 });
+
 
 
 
