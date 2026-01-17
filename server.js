@@ -134,7 +134,7 @@ socket.on('send_message', async (data) => {
             socket.emit('ai_typing', { isTyping: true });
 
             try {
-                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                 const result = await model.generateContent(content || "Hello");
                 const aiText = result.response.text();
 
@@ -225,5 +225,6 @@ server.listen(PORT, () => {
     console.log(`🧠 AI Models configured:`, AI_MODELS);
 
 });
+
 
 
