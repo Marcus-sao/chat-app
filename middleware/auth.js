@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('.../models/user');
+const User = require('../models/user');
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -39,5 +39,6 @@ const authMiddleware = async (req, res, next) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 module.exports = authMiddleware;
