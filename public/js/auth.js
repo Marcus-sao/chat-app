@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = window.location.origin + '/api';
 
 // ==================== LOGIN HANDLER ====================
 const loginForm = document.getElementById('loginForm');
@@ -166,5 +166,6 @@ if ((currentPath === '/login.html' || currentPath === '/register.html')) {
         window.location.href = '/index.html';
     }
 }
+
 
 console.log('Auth.js loaded successfully');
