@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const User = require('../models/user'); // Adjust path
+const User = require('./models/user'); // Adjust path
 require('dotenv').config();
 
 mongoose.connect(process.env.MONGODB_URI).then(async () => {
@@ -19,4 +19,5 @@ mongoose.connect(process.env.MONGODB_URI).then(async () => {
         console.log("🤖 Bot already exists.");
     }
     process.exit();
+
 });
