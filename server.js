@@ -132,19 +132,17 @@ socket.on('send_message', async (data) => {
         }
 
         // ✅ AI BOT (direct only)
-        if (receiverId === AI_BOT_ID) {
+        // ✅ Correct try/catch structure
+if (receiverId === AI_BOT_ID) {
     socket.emit('ai_typing', { isTyping: true });
 
     try {
-        // ✅ The new 2026 way to call the model
-       // ✅ This must use "client" because we named it "client" at the top
-            const response = await client.models.generateContent({
+        const response = await client.models.generateContent({
             model: AI_MODELS.primary,
             contents: [{ role: 'user', parts: [{ text: content || "Hello" }] }]
         });
-        });
 
-        const aiText = response.text; // Simple .text property in the new SDK
+        const aiText = response.text;
 
         const aiMsg = await Message.create({
             sender: AI_BOT_ID,
@@ -164,8 +162,10 @@ socket.on('send_message', async (data) => {
             }
         });
 
-    } catch (aiErr) {
-        console.error('🤖 AI Generation Error:', aiErr);
+    } catch (error) {
+        // ✅ THIS IS THE MISSING PART
+        console.error('🤖 AI Error:', error);
+        socket.emit('message_error', { error: 'AI is currently unavailable.' });
     } finally {
         socket.emit('ai_typing', { isTyping: false });
     }
@@ -235,6 +235,7 @@ server.listen(PORT, () => {
     console.log(`🧠 AI Models configured:`, AI_MODELS);
 
 });
+
 
 
 
