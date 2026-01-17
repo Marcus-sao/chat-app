@@ -43,9 +43,16 @@ if (!fs.existsSync(uploadsDir)) {
 // Make io accessible to routes
 app.set('io', io);
 
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('✅ MongoDB Connected'))
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+// This version uses your online link on Render, 
+// but still works on your personal computer (local) if the link is missing.
+const dbURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/chat-app';
+
+mongoose.connect(dbURI)
+    .then(() => console.log('✅ Database connected successfully!'))
+    .catch(err => {
+        console.error('❌ Database connection failed!');
+        console.error('Reason:', err.message);
+    });
 
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
@@ -218,3 +225,4 @@ server.listen(PORT, () => {
     console.log(`🧠 AI Models configured:`, AI_MODELS);
 
 });
+
