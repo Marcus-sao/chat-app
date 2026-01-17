@@ -27,7 +27,7 @@ const AI_BOT_ID = "677d9c66e765432101234567";
 // AI Model configuration - UPDATED FOR 2026
 const AI_MODELS = {
     primary: "gemini-3-flash", // Gemini 3 is now the standard
-    fallback: "gemini-3-pro"
+    fallback: "gemini-3-pro",
     legacy: "gemini-pro"
 };
 app.use(cors());
@@ -231,6 +231,7 @@ server.listen(PORT, () => {
     console.log(`🧠 AI Models configured:`, AI_MODELS);
 
 });
+
 
 
 
